@@ -131,12 +131,50 @@ rise/
     └── reproducibility.py  # Seeding, logging, checkpoints
 ```
 
+## Data
+
+Pre-computed embeddings for reproducing paper results are available on HuggingFace:
+
+**[mfwta/RISE-ICLR-2026](https://huggingface.co/datasets/mfwta/RISE-ICLR-2026)**
+
+- 7 languages: English, Spanish, Japanese, Arabic, Thai, Tamil, Zulu
+- 3 transformations: negation, conditionality, politeness
+- 1,000 sentence pairs per language/transformation
+- 3,072-dimensional OpenAI `text-embedding-3-large` embeddings
+
+### Download Data
+
+```bash
+# Using huggingface_hub
+pip install huggingface_hub
+huggingface-cli download mfwta/RISE-ICLR-2026 --repo-type dataset --local-dir data/paper_embeddings
+
+# Or clone with git
+git clone https://huggingface.co/datasets/mfwta/RISE-ICLR-2026 data/paper_embeddings
+```
+
 ## Reproducing Paper Results
 
 ```bash
-# Run full evaluation suite
+# 1. Install the package
+pip install -e .
+
+# 2. Download the data (see above)
+
+# 3. Verify paper results
+python scripts/verify_paper_results.py
+
+# Expected output:
+# negation        0.857 (expected 0.864)  PASS
+# conditionality  0.828 (expected 0.832)  PASS
+# politeness      0.805 (expected 0.809)  PASS
+```
+
+### Full Evaluation Suite
+
+```bash
 python -m rise.experiments.run_evaluation \
-    --embedding-model "sentence-transformers/LaBSE" \
+    --data-dir data/paper_embeddings \
     --transformations negation conditionality politeness \
     --languages en es ja ar th ta zu \
     --output-dir results/

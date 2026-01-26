@@ -1,0 +1,48 @@
+"""
+Numerical constants and tolerances for RISE.
+
+These constants define the numerical precision thresholds used throughout
+the RISE implementation for Riemannian geometry operations.
+"""
+
+import math
+
+# =============================================================================
+# Numerical Tolerances
+# =============================================================================
+
+# Clamping epsilon for arccos to avoid NaN from numerical errors
+ARCCOS_CLAMP_EPS = 1e-7
+
+# Threshold below which vectors are considered identical (theta ≈ 0)
+NEAR_IDENTITY_THRESHOLD = 1e-6
+
+# Threshold above which vectors are considered antipodal (theta ≈ π)
+ANTIPODAL_THRESHOLD = math.pi - 1e-6
+
+# Division safety epsilon for operations like 1/sin(theta)
+DIVISION_EPS = 1e-8
+
+# Tolerance for verifying tangent space orthogonality (float32)
+ORTHOGONALITY_TOL = 1e-5
+
+# Relaxed tolerance for float16 precision
+ORTHOGONALITY_TOL_FP16 = 1e-2
+
+# Tolerance for verifying rotor maps n to e1
+ROTOR_VERIFICATION_TOL = 1e-5
+ROTOR_VERIFICATION_TOL_FP16 = 1e-2
+
+# =============================================================================
+# Geometry Constants
+# =============================================================================
+
+# Reference direction for canonicalization (first basis vector)
+# In code, we construct e1 dynamically to match tensor dimensions
+
+# =============================================================================
+# Default Model Configuration
+# =============================================================================
+
+DEFAULT_EMBEDDING_DIM = 3072  # OpenAI text-embedding-3-large
+DEFAULT_DTYPE_STR = "float32"

@@ -161,28 +161,28 @@ pip install -e .
 
 # 2. Download the data (see above)
 
-# 3. Verify paper results
-python scripts/verify_paper_results.py
-
-# Expected output:
-# negation        0.857 (expected 0.864)  PASS
-# conditionality  0.828 (expected 0.832)  PASS
-# politeness      0.805 (expected 0.809)  PASS
-```
-
-### Full Evaluation Suite
-
-```bash
+# 3. Run the evaluation suite
 python -m rise.experiments.run_evaluation \
     --data-dir data/paper_embeddings \
     --transformations negation conditionality politeness \
     --languages en es ja ar th ta zu \
     --output-dir results/
 
-# Generate paper figures
+# 4. Generate figures
 python -m rise.experiments.generate_figures \
     --results-dir results/ \
     --output-dir figures/
+```
+
+To also run cross-language transfer experiments, add `--cross-language`:
+
+```bash
+python -m rise.experiments.run_evaluation \
+    --data-dir data/paper_embeddings \
+    --transformations negation conditionality politeness \
+    --languages en es ja ar th ta zu \
+    --output-dir results/ \
+    --cross-language
 ```
 
 ## Citation

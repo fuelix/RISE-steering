@@ -1,12 +1,12 @@
 """
-Run full evaluation suite for RISE paper.
+Run full evaluation suite for RISE.
 
 This script runs RISE and all baselines on the specified transformations
-and languages, producing results suitable for the paper tables.
+and languages, producing results suitable for paper tables.
 
 Usage:
     python -m rise.experiments.run_evaluation \
-        --embedding-model sentence-transformers/LaBSE \
+        --data-dir data/paper_embeddings \
         --transformations negation conditionality politeness \
         --languages en es ja ar th ta zu \
         --output-dir results/
@@ -34,6 +34,13 @@ from rise.utils.reproducibility import set_seed, ExperimentLogger
 
 logger = logging.getLogger(__name__)
 
+# Map transformation names to JSONL filenames
+TRANSFORM_FILE_MAP = {
+    "negation": "negation_pairs.jsonl",
+    "conditionality": "conditionality_pairs.jsonl",
+    "politeness": "polite_pairs.jsonl",
+}
+
 
 def load_embeddings(
     data_dir: Path,
@@ -43,6 +50,10 @@ def load_embeddings(
     """
     Load neutral and transformed embeddings for a transformation/language pair.
 
+    Supports two data formats:
+    - JSONL: ``data_dir/language/transformation_pairs.jsonl`` (HuggingFace dataset format)
+    - PyTorch: ``data_dir/transformation_language_neutral.pt`` and ``*_transformed.pt``
+
     Args:
         data_dir: Directory containing embedding files.
         transformation: Transformation name (e.g., "negation").
@@ -51,19 +62,53 @@ def load_embeddings(
     Returns:
         Tuple of (neutral_embeddings, transformed_embeddings).
     """
+    # Try JSONL format first (HuggingFace dataset layout)
+    filename = TRANSFORM_FILE_MAP.get(transformation, f"{transformation}_pairs.jsonl")
+    jsonl_path = data_dir / language / filename
+
+    if jsonl_path.exists():
+        return _load_jsonl_embeddings(jsonl_path)
+
+    # Fall back to PyTorch tensor format
     neutral_path = data_dir / f"{transformation}_{language}_neutral.pt"
     transformed_path = data_dir / f"{transformation}_{language}_transformed.pt"
 
-    if not neutral_path.exists() or not transformed_path.exists():
-        raise FileNotFoundError(
-            f"Embeddings not found for {transformation}/{language}. "
-            f"Expected files: {neutral_path}, {transformed_path}"
-        )
+    if neutral_path.exists() and transformed_path.exists():
+        return _load_pt_embeddings(neutral_path, transformed_path)
 
+    raise FileNotFoundError(
+        f"Embeddings not found for {transformation}/{language}. "
+        f"Looked for JSONL at {jsonl_path} and PyTorch at {neutral_path}"
+    )
+
+
+def _load_jsonl_embeddings(filepath: Path) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Load embeddings from a JSONL file with neutral/phenomenon pairs."""
+    neutral_embeddings = []
+    transformed_embeddings = []
+
+    with open(filepath, "r") as f:
+        for line in f:
+            record = json.loads(line)
+            neutral_embeddings.append(record["neutral"]["embedding"])
+            transformed_embeddings.append(record["phenomenon"]["embedding"])
+
+    neutral = torch.tensor(neutral_embeddings, dtype=torch.float32)
+    transformed = torch.tensor(transformed_embeddings, dtype=torch.float32)
+
+    neutral = F.normalize(neutral, dim=1)
+    transformed = F.normalize(transformed, dim=1)
+
+    return neutral, transformed
+
+
+def _load_pt_embeddings(
+    neutral_path: Path, transformed_path: Path
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Load embeddings from PyTorch tensor files."""
     neutral = torch.load(neutral_path)
     transformed = torch.load(transformed_path)
 
-    # Normalize to unit sphere
     neutral = F.normalize(neutral, dim=1)
     transformed = F.normalize(transformed, dim=1)
 

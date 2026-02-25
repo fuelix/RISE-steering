@@ -19,7 +19,8 @@ class Procrustes:
     Orthogonal Procrustes alignment baseline for semantic transformations.
 
     Solves: W* = argmin_W ||neutral @ W - transformed||_F  s.t. W^T W = I
-    Solution: W = U @ V^T where M = neutral^T @ transformed = U S V^T
+    Solution: W = U V^T where M = neutral^T @ transformed = U S V^T
+    Prediction for column vector x: W^T @ x  (equivalently, x @ W for row vectors)
 
     Implements the same duck-typed interface as RISE:
         .fit(neutral_embeddings, transformed_embeddings)
@@ -55,7 +56,9 @@ class Procrustes:
             raise ValueError("Procrustes not fitted. Call fit() first.")
 
         embedding = F.normalize(embedding, dim=0)
-        predicted = F.normalize(self.W @ embedding, dim=0)
+        # W solves min ||N W - T||_F (row-vector convention), so for a
+        # column vector x the prediction is W^T x.
+        predicted = F.normalize(self.W.T @ embedding, dim=0)
         cosine_sim = F.cosine_similarity(embedding, predicted, dim=0).item()
 
         return TransformPrediction(

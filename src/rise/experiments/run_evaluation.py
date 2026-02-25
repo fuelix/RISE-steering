@@ -22,6 +22,7 @@ import torch
 import torch.nn.functional as F
 
 from rise import RISE
+from rise.baselines import MDV, Procrustes
 from rise.evaluation import (
     compute_alignment_score,
     compute_cross_language_transfer,
@@ -162,8 +163,19 @@ def run_single_experiment(
     rise = RISE()
     rise.fit(neutral_embeddings=train_n, transformed_embeddings=train_t)
     results["RISE"] = evaluate_method(rise, test_n, test_t)
-
     logger.info(f"  RISE: {results['RISE']['alignment_score']:.4f}")
+
+    # MDV baseline
+    mdv = MDV()
+    mdv.fit(train_n, train_t)
+    results["MDV"] = evaluate_method(mdv, test_n, test_t)
+    logger.info(f"  MDV: {results['MDV']['alignment_score']:.4f}")
+
+    # Procrustes baseline
+    procrustes = Procrustes()
+    procrustes.fit(train_n, train_t)
+    results["Procrustes"] = evaluate_method(procrustes, test_n, test_t)
+    logger.info(f"  Procrustes: {results['Procrustes']['alignment_score']:.4f}")
 
     return results
 
@@ -205,28 +217,45 @@ def run_cross_language_experiment(
         logger.error("Need at least 2 languages for cross-language experiment")
         return {}
 
-    results = {"RISE": {}}
+    results = {"RISE": {}, "MDV": {}, "Procrustes": {}}
 
     for train_lang in language_data:
         train_data = language_data[train_lang]
 
+        # RISE
         rise = RISE()
         rise.fit(
             neutral_embeddings=train_data["train_neutral"],
             transformed_embeddings=train_data["train_transformed"],
         )
 
+        # MDV baseline
+        mdv = MDV()
+        mdv.fit(
+            train_data["train_neutral"],
+            train_data["train_transformed"],
+        )
+
+        # Procrustes baseline
+        procrustes = Procrustes()
+        procrustes.fit(
+            train_data["train_neutral"],
+            train_data["train_transformed"],
+        )
+
         # Test on all languages
         for test_lang in language_data:
             test_data = language_data[test_lang]
-            eval_results = evaluate_method(
-                rise,
-                test_data["test_neutral"],
-                test_data["test_transformed"],
-            )
-            results["RISE"][(train_lang, test_lang)] = eval_results[
-                "alignment_score"
-            ]
+
+            for name, method in [("RISE", rise), ("MDV", mdv), ("Procrustes", procrustes)]:
+                eval_results = evaluate_method(
+                    method,
+                    test_data["test_neutral"],
+                    test_data["test_transformed"],
+                )
+                results[name][(train_lang, test_lang)] = eval_results[
+                    "alignment_score"
+                ]
 
     return results
 
@@ -336,13 +365,15 @@ def main():
     print("RESULTS SUMMARY")
     print("=" * 60)
 
+    methods = ["RISE", "MDV", "Procrustes"]
+
     for transformation in args.transformations:
         if transformation not in all_results:
             continue
         print(f"\n{transformation.upper()}")
-        print("-" * 40)
+        print("-" * 50)
 
-        header = "Language".ljust(10) + "RISE".rjust(10)
+        header = "Language".ljust(10) + "".join(m.rjust(12) for m in methods)
         print(header)
 
         for language in args.languages:
@@ -350,11 +381,12 @@ def main():
                 continue
             lang_results = all_results[transformation][language]
             row = language.ljust(10)
-            if "RISE" in lang_results:
-                score = lang_results["RISE"]["alignment_score"]
-                row += f"{score:.4f}".rjust(10)
-            else:
-                row += "N/A".rjust(10)
+            for method in methods:
+                if method in lang_results:
+                    score = lang_results[method]["alignment_score"]
+                    row += f"{score:.4f}".rjust(12)
+                else:
+                    row += "N/A".rjust(12)
             print(row)
 
 

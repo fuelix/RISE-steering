@@ -30,6 +30,7 @@ from .core.rise import RISE
 from .core.prototype import RISEPrototype, learn_rise_prototype, predict_transformation
 from .core.riemannian import riemannian_log, riemannian_exp, geodesic_distance
 from .core.rotor import compute_householder_rotor
+from .baselines import MDV, Procrustes
 
 __version__ = "0.1.0"
 
@@ -37,6 +38,9 @@ __all__ = [
     # Main classes
     "RISE",
     "RISEPrototype",
+    # Baselines
+    "MDV",
+    "Procrustes",
     # Functional interface
     "learn_rise_prototype",
     "predict_transformation",

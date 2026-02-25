@@ -147,7 +147,7 @@ PAPER_SECTION_6_1 = {
 # ── Configuration ──────────────────────────────────────────────────────────
 
 MODEL_DATA_DIRS = {
-    "text-embedding-3-large": Path("data/paper_embeddings"),
+    "text-embedding-3-large": Path("data/text-embedding-3-large"),
     "bge-m3": Path("data/bge-m3"),
     "mBERT": Path("data/mbert"),
 }

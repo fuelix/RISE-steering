@@ -1,6 +1,6 @@
 # RISE: Rotor-Invariant Shift Estimation
 
-Implementation of **Geometric Rotor Interpretations of Multilingual Embedding Models** (ICLR 2026).
+Implementation of **Mapping Semantic & Syntactic Relationships With Geometric Rotation** (ICLR 2026).
 
 RISE learns semantic transformations on the unit hypersphere using Riemannian geometry and Householder rotors, enabling cross-language transfer of transformations like negation, conditionality, and politeness shifts.
 
@@ -13,32 +13,32 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-## Quick Start
+## Data
 
+Pre-computed embeddings for reproducing paper results are available on HuggingFace:
+
+**[mfwta/RISE-ICLR-2026](https://huggingface.co/datasets/mfwta/RISE-ICLR-2026)**
+
+- 7 languages: English, Spanish, Japanese, Arabic, Thai, Tamil, Zulu
+- 3 transformations: negation, conditionality, politeness
+- 1,000 sentence pairs per language/transformation
+- 3,072-dimensional OpenAI `text-embedding-3-large` embeddings
+
+```bash
+# Using huggingface_hub
+pip install huggingface_hub
+huggingface-cli download mfwta/RISE-ICLR-2026 --repo-type dataset --local-dir data/paper_embeddings
+```
+
+You can also use Python:
 ```python
-from rise import RISE, RISEPrototype
-import torch
+from huggingface_hub import snapshot_download
 
-# Using the high-level RISE interface
-rise = RISE()
-
-# Fit on paired embeddings (neutral -> transformed)
-neutral_embeddings = torch.randn(100, 768)  # Your embeddings
-neutral_embeddings = torch.nn.functional.normalize(neutral_embeddings, dim=1)
-transformed_embeddings = torch.randn(100, 768)
-transformed_embeddings = torch.nn.functional.normalize(transformed_embeddings, dim=1)
-
-stats = rise.fit(
-    neutral_embeddings=neutral_embeddings,
-    transformed_embeddings=transformed_embeddings
+snapshot_download(
+    repo_id='mfwta/RISE-ICLR-2026',
+    repo_type='dataset',
+    local_dir='data/paper_embeddings'
 )
-
-# Transform a new embedding
-test_embedding = torch.randn(768)
-test_embedding = torch.nn.functional.normalize(test_embedding, dim=0)
-result = rise.transform(test_embedding)
-
-print(f"Alignment: {result.metadata['alignment_score']:.4f}")
 ```
 
 ## Core Algorithm
@@ -84,48 +84,6 @@ transfer = compute_cross_language_transfer(
     languages=["en", "es", "ja", "ar"]
 )
 ```
-
-## Project Structure
-
-```
-rise/
-├── core/
-│   ├── riemannian.py   # Log/exp maps on hypersphere
-│   ├── rotor.py        # Householder rotor computation
-│   ├── prototype.py    # Prototype learning & transport
-│   └── rise.py         # High-level RISE interface
-├── evaluation/
-│   ├── metrics.py      # Alignment scores, transfer metrics
-│   └── visualization.py # Plotting utilities
-└── utils/
-    ├── constants.py    # Numerical constants
-    ├── types.py        # Type definitions
-    ├── config.py       # Configuration dataclasses
-    └── reproducibility.py  # Seeding, logging, checkpoints
-```
-
-## Data
-
-Pre-computed embeddings for reproducing paper results are available on HuggingFace:
-
-**[mfwta/RISE-ICLR-2026](https://huggingface.co/datasets/mfwta/RISE-ICLR-2026)**
-
-- 7 languages: English, Spanish, Japanese, Arabic, Thai, Tamil, Zulu
-- 3 transformations: negation, conditionality, politeness
-- 1,000 sentence pairs per language/transformation
-- 3,072-dimensional OpenAI `text-embedding-3-large` embeddings
-
-### Download Data
-
-```bash
-# Using huggingface_hub
-pip install huggingface_hub
-huggingface-cli download mfwta/RISE-ICLR-2026 --repo-type dataset --local-dir data/paper_embeddings
-
-# Or clone with git
-git clone https://huggingface.co/datasets/mfwta/RISE-ICLR-2026 data/paper_embeddings
-```
-
 ## Reproducing Paper Results
 
 ```bash

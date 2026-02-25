@@ -65,29 +65,6 @@ RISE operates on the unit hypersphere S^(d-1) using Riemannian geometry:
    v_pred = exp_n(R(n)^T @ p)
    ```
 
-## Baseline Comparisons
-
-RISE includes implementations of comparison methods:
-
-```python
-from rise.baselines import ParkMethod, CAAMethod, HPRMethod
-
-# Park's Linear Representation (ICML 2024)
-park = ParkMethod(alpha=0.4)
-park.fit(neutral_embeddings, transformed_embeddings)
-result = park.transform(test_embedding)
-
-# Contrastive Activation Addition (Rimsky et al., 2023)
-caa = CAAMethod(strength=2.0)
-caa.fit(neutral_embeddings, transformed_embeddings)
-result = caa.transform(test_embedding)
-
-# Householder Pseudo-Rotation (ACL 2024)
-hpr = HPRMethod(n_reflections=2)
-hpr.fit(neutral_embeddings, transformed_embeddings)
-result = hpr.transform(test_embedding)
-```
-
 ## Evaluation Metrics
 
 ```python
@@ -117,10 +94,6 @@ rise/
 │   ├── rotor.py        # Householder rotor computation
 │   ├── prototype.py    # Prototype learning & transport
 │   └── rise.py         # High-level RISE interface
-├── baselines/
-│   ├── park.py         # Park et al. (2024)
-│   ├── caa.py          # Rimsky et al. (2023)
-│   └── hpr.py          # Chai et al. (2024)
 ├── evaluation/
 │   ├── metrics.py      # Alignment scores, transfer metrics
 │   └── visualization.py # Plotting utilities
@@ -161,28 +134,28 @@ pip install -e .
 
 # 2. Download the data (see above)
 
-# 3. Run the evaluation suite
-python -m rise.experiments.run_evaluation \
-    --data-dir data/paper_embeddings \
-    --transformations negation conditionality politeness \
-    --languages en es ja ar th ta zu \
-    --output-dir results/
+# 3. Verify paper results
+python scripts/verify_paper_results.py
 
-# 4. Generate figures
-python -m rise.experiments.generate_figures \
-    --results-dir results/ \
-    --output-dir figures/
+# Expected output:
+# negation        0.857 (expected 0.864)  PASS
+# conditionality  0.828 (expected 0.832)  PASS
+# politeness      0.805 (expected 0.809)  PASS
 ```
 
-To also run cross-language transfer experiments, add `--cross-language`:
+### Full Evaluation Suite
 
 ```bash
 python -m rise.experiments.run_evaluation \
     --data-dir data/paper_embeddings \
     --transformations negation conditionality politeness \
     --languages en es ja ar th ta zu \
-    --output-dir results/ \
-    --cross-language
+    --output-dir results/
+
+# Generate paper figures
+python -m rise.experiments.generate_figures \
+    --results-dir results/ \
+    --output-dir figures/
 ```
 
 ## Citation

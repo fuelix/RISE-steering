@@ -72,7 +72,7 @@ def generate_main_comparison_figure(
 
     for transformation in main_results:
         # Prepare data for plotting
-        method_scores = {"RISE": {}, "Park": {}, "CAA": {}, "HPR": {}}
+        method_scores = {"RISE": {}}
 
         for lang, lang_results in main_results[transformation].items():
             if lang in languages:
@@ -150,7 +150,7 @@ def generate_summary_table(
     for transformation in main_results:
         latex_lines.append(r"\multicolumn{" + str(len(languages) + 1) + r"}{l}{\textbf{" + transformation.title() + r"}} \\")
 
-        for method in ["RISE", "Park", "CAA", "HPR"]:
+        for method in ["RISE"]:
             scores = []
             for lang in languages:
                 if lang in main_results[transformation]:

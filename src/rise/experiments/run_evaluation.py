@@ -1,8 +1,8 @@
 """
 Run full evaluation suite for RISE paper.
 
-This script runs RISE and all baselines on the specified transformations
-and languages, producing results suitable for the paper tables.
+This script runs RISE on the specified transformations and languages,
+producing results suitable for the paper tables.
 
 Usage:
     python -m rise.experiments.run_evaluation \
@@ -22,7 +22,6 @@ import torch
 import torch.nn.functional as F
 
 from rise import RISE
-from rise.baselines import ParkMethod, CAAMethod, HPRMethod, SteeringMethod
 from rise.evaluation import (
     compute_alignment_score,
     compute_cross_language_transfer,
@@ -35,6 +34,11 @@ from rise.utils.reproducibility import set_seed, ExperimentLogger
 logger = logging.getLogger(__name__)
 
 
+TRANSFORMATION_TO_FILENAME = {
+    "politeness": "polite",
+}
+
+
 def load_embeddings(
     data_dir: Path,
     transformation: str,
@@ -42,6 +46,9 @@ def load_embeddings(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Load neutral and transformed embeddings for a transformation/language pair.
+
+    Reads JSONL pair files structured as {lang}/{transformation}_pairs.jsonl,
+    where each line has "neutral" and "phenomenon" objects with "embedding" arrays.
 
     Args:
         data_dir: Directory containing embedding files.
@@ -51,17 +58,26 @@ def load_embeddings(
     Returns:
         Tuple of (neutral_embeddings, transformed_embeddings).
     """
-    neutral_path = data_dir / f"{transformation}_{language}_neutral.pt"
-    transformed_path = data_dir / f"{transformation}_{language}_transformed.pt"
+    filename = TRANSFORMATION_TO_FILENAME.get(transformation, transformation)
+    jsonl_path = data_dir / language / f"{filename}_pairs.jsonl"
 
-    if not neutral_path.exists() or not transformed_path.exists():
+    if not jsonl_path.exists():
         raise FileNotFoundError(
             f"Embeddings not found for {transformation}/{language}. "
-            f"Expected files: {neutral_path}, {transformed_path}"
+            f"Expected file: {jsonl_path}"
         )
 
-    neutral = torch.load(neutral_path)
-    transformed = torch.load(transformed_path)
+    neutral_embeddings = []
+    transformed_embeddings = []
+
+    with open(jsonl_path) as f:
+        for line in f:
+            record = json.loads(line)
+            neutral_embeddings.append(record["neutral"]["embedding"])
+            transformed_embeddings.append(record["phenomenon"]["embedding"])
+
+    neutral = torch.tensor(neutral_embeddings)
+    transformed = torch.tensor(transformed_embeddings)
 
     # Normalize to unit sphere
     neutral = F.normalize(neutral, dim=1)
@@ -94,7 +110,7 @@ def train_test_split(
 
 
 def evaluate_method(
-    method: SteeringMethod,
+    method: RISE,
     test_neutral: torch.Tensor,
     test_transformed: torch.Tensor,
 ) -> Dict[str, float]:
@@ -106,14 +122,14 @@ def evaluate_method(
     """
     predictions = []
     for i in range(test_neutral.shape[0]):
-        result = method.transform(test_neutral[i])
+        result = method.transform(embedding=test_neutral[i])
         predictions.append(result.predicted_embedding)
 
     predictions = torch.stack(predictions)
     alignment = compute_alignment_score(predictions, test_transformed)
 
     return {
-        "alignment_score": alignment,
+        "alignment_score": alignment.score,
         "n_test_samples": test_neutral.shape[0],
     }
 
@@ -125,7 +141,7 @@ def run_single_experiment(
     seed: int = 42,
 ) -> Dict[str, Dict[str, float]]:
     """
-    Run all methods on a single transformation/language pair.
+    Run RISE on a single transformation/language pair.
 
     Returns:
         Dictionary mapping method names to their results.
@@ -147,23 +163,7 @@ def run_single_experiment(
     rise.fit(neutral_embeddings=train_n, transformed_embeddings=train_t)
     results["RISE"] = evaluate_method(rise, test_n, test_t)
 
-    # Park
-    park = ParkMethod(alpha=0.4)
-    park.fit(train_n, train_t)
-    results["Park"] = evaluate_method(park, test_n, test_t)
-
-    # CAA
-    caa = CAAMethod(strength=2.0)
-    caa.fit(train_n, train_t)
-    results["CAA"] = evaluate_method(caa, test_n, test_t)
-
-    # HPR
-    hpr = HPRMethod(n_reflections=2)
-    hpr.fit(train_n, train_t)
-    results["HPR"] = evaluate_method(hpr, test_n, test_t)
-
-    for method_name, method_results in results.items():
-        logger.info(f"  {method_name}: {method_results['alignment_score']:.4f}")
+    logger.info(f"  RISE: {results['RISE']['alignment_score']:.4f}")
 
     return results
 
@@ -205,44 +205,28 @@ def run_cross_language_experiment(
         logger.error("Need at least 2 languages for cross-language experiment")
         return {}
 
-    methods = {
-        "RISE": lambda: RISE(),
-        "Park": lambda: ParkMethod(alpha=0.4),
-        "CAA": lambda: CAAMethod(strength=2.0),
-        "HPR": lambda: HPRMethod(n_reflections=2),
-    }
-
-    results = {name: {} for name in methods}
+    results = {"RISE": {}}
 
     for train_lang in language_data:
         train_data = language_data[train_lang]
 
-        for method_name, method_factory in methods.items():
-            method = method_factory()
+        rise = RISE()
+        rise.fit(
+            neutral_embeddings=train_data["train_neutral"],
+            transformed_embeddings=train_data["train_transformed"],
+        )
 
-            # Fit on training language
-            if method_name == "RISE":
-                method.fit(
-                    neutral_embeddings=train_data["train_neutral"],
-                    transformed_embeddings=train_data["train_transformed"],
-                )
-            else:
-                method.fit(
-                    train_data["train_neutral"],
-                    train_data["train_transformed"],
-                )
-
-            # Test on all languages
-            for test_lang in language_data:
-                test_data = language_data[test_lang]
-                eval_results = evaluate_method(
-                    method,
-                    test_data["test_neutral"],
-                    test_data["test_transformed"],
-                )
-                results[method_name][(train_lang, test_lang)] = eval_results[
-                    "alignment_score"
-                ]
+        # Test on all languages
+        for test_lang in language_data:
+            test_data = language_data[test_lang]
+            eval_results = evaluate_method(
+                rise,
+                test_data["test_neutral"],
+                test_data["test_transformed"],
+            )
+            results["RISE"][(train_lang, test_lang)] = eval_results[
+                "alignment_score"
+            ]
 
     return results
 
@@ -358,8 +342,7 @@ def main():
         print(f"\n{transformation.upper()}")
         print("-" * 40)
 
-        methods = ["RISE", "Park", "CAA", "HPR"]
-        header = "Language".ljust(10) + "".join(m.rjust(10) for m in methods)
+        header = "Language".ljust(10) + "RISE".rjust(10)
         print(header)
 
         for language in args.languages:
@@ -367,12 +350,11 @@ def main():
                 continue
             lang_results = all_results[transformation][language]
             row = language.ljust(10)
-            for method in methods:
-                if method in lang_results:
-                    score = lang_results[method]["alignment_score"]
-                    row += f"{score:.4f}".rjust(10)
-                else:
-                    row += "N/A".rjust(10)
+            if "RISE" in lang_results:
+                score = lang_results["RISE"]["alignment_score"]
+                row += f"{score:.4f}".rjust(10)
+            else:
+                row += "N/A".rjust(10)
             print(row)
 
 

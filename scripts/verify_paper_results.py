@@ -28,7 +28,6 @@ import torch.nn.functional as F
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from rise import RISE
-from rise.baselines import ParkMethod, CAAMethod, HPRMethod
 
 logging.basicConfig(
     level=logging.INFO,

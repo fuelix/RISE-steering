@@ -168,14 +168,6 @@ slurm-*.out
 *.vrb
 
 # -----------------------------------------------------------------------------
-# Internal development files (not part of research code release)
-# -----------------------------------------------------------------------------
-.claude/
-CLAUDE.md
-PLAN.md
-TEST_SUITE_SUMMARY.md
-
-# -----------------------------------------------------------------------------
 # OS generated files
 # -----------------------------------------------------------------------------
 .DS_Store
@@ -207,4 +199,8 @@ config.local.*
 *.tmp
 *.temp
 .scratch/
+.claude/
+CLAUDE.md
+PLAN.md
+TEST_SUITE_SUMMARY.md
 data/paper_embeddings/

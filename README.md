@@ -65,29 +65,6 @@ RISE operates on the unit hypersphere S^(d-1) using Riemannian geometry:
    v_pred = exp_n(R(n)^T @ p)
    ```
 
-## Baseline Comparisons
-
-RISE includes implementations of comparison methods:
-
-```python
-from rise.baselines import ParkMethod, CAAMethod, HPRMethod
-
-# Park's Linear Representation (ICML 2024)
-park = ParkMethod(alpha=0.4)
-park.fit(neutral_embeddings, transformed_embeddings)
-result = park.transform(test_embedding)
-
-# Contrastive Activation Addition (Rimsky et al., 2023)
-caa = CAAMethod(strength=2.0)
-caa.fit(neutral_embeddings, transformed_embeddings)
-result = caa.transform(test_embedding)
-
-# Householder Pseudo-Rotation (ACL 2024)
-hpr = HPRMethod(n_reflections=2)
-hpr.fit(neutral_embeddings, transformed_embeddings)
-result = hpr.transform(test_embedding)
-```
-
 ## Evaluation Metrics
 
 ```python
@@ -107,7 +84,6 @@ transfer = compute_cross_language_transfer(
     languages=["en", "es", "ja", "ar"]
 )
 ```
-
 ## Reproducing Paper Results
 
 ```bash

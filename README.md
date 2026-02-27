@@ -25,19 +25,16 @@ Pre-computed embeddings for reproducing paper results are available on HuggingFa
 - 3,072-dimensional OpenAI `text-embedding-3-large` embeddings
 
 ```bash
-# Using huggingface_hub
 pip install huggingface_hub
-huggingface-cli download mfwta/RISE-ICLR-2026 --repo-type dataset --local-dir data/paper_embeddings
 ```
 
-You can also use Python:
 ```python
 from huggingface_hub import snapshot_download
 
 snapshot_download(
     repo_id='mfwta/RISE-ICLR-2026',
     repo_type='dataset',
-    local_dir='data/paper_embeddings'
+    local_dir='data'
 )
 ```
 

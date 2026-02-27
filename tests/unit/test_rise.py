@@ -350,9 +350,9 @@ class TestRISEIntegration:
         
         assert eval_result.num_samples == 10
     
-    def test_full_workflow_with_text(self, mock_batch_embedder):
+    def test_full_workflow_with_text(self, mock_embedder):
         """Test complete workflow with text inputs."""
-        embedder = mock_batch_embedder(dim=256)
+        embedder = mock_embedder(dim=256)
         rise = RISE(embedder=embedder, canonicalize=True)
         
         # Training pairs

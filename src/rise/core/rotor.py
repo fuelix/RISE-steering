@@ -168,8 +168,9 @@ def verify_orthogonality(
     identity = torch.eye(d, device=matrix.device, dtype=matrix.dtype)
     product = matrix.T @ matrix
 
-    error = torch.norm(product - identity)
-    return error < tol
+    # Use max-element error (infinity norm) for dimension-independent check
+    error = torch.max(torch.abs(product - identity))
+    return error.item() < tol
 
 
 def get_reference_direction(

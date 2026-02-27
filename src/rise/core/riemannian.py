@@ -26,9 +26,7 @@ import torch
 import torch.nn.functional as F
 
 from ..utils.constants import (
-    ARCCOS_CLAMP_EPS,
     NEAR_IDENTITY_THRESHOLD,
-    ANTIPODAL_THRESHOLD,
     DIVISION_EPS,
     ORTHOGONALITY_TOL,
     ORTHOGONALITY_TOL_FP16,
@@ -74,20 +72,24 @@ def riemannian_log(
     base = F.normalize(base, dim=0)
     target = F.normalize(target, dim=0)
 
-    # Compute geodesic angle
-    cos_theta = torch.dot(base, target).clamp(-1 + ARCCOS_CLAMP_EPS, 1 - ARCCOS_CLAMP_EPS)
-    theta = torch.acos(cos_theta)
+    # Compute cosine of geodesic angle (raw, before clamping)
+    cos_theta_raw = torch.dot(base, target)
 
-    # Handle near-identity case (v ≈ n)
-    if theta < NEAR_IDENTITY_THRESHOLD:
+    # Handle near-identity case (v ≈ n): check in cosine domain to avoid
+    # precision loss from acos near 1.0
+    if cos_theta_raw > 1 - NEAR_IDENTITY_THRESHOLD:
         return torch.zeros_like(base)
 
-    # Handle antipodal case (v ≈ -n)
-    if theta > ANTIPODAL_THRESHOLD:
+    # Handle antipodal case (v ≈ -n): check in cosine domain for the same reason
+    if cos_theta_raw < -1 + NEAR_IDENTITY_THRESHOLD:
         raise ValueError(
-            f"Vectors are nearly antipodal (θ={theta:.6f} rad ≈ π). "
+            f"Vectors are nearly antipodal (cos θ={cos_theta_raw:.6f} ≈ -1). "
             "The logarithmic map is undefined for antipodal points."
         )
+
+    # Safe to compute acos now (cos_theta is well away from ±1)
+    cos_theta = cos_theta_raw.clamp(-1.0, 1.0)
+    theta = torch.acos(cos_theta)
 
     # Compute tangent vector
     # The component of v orthogonal to n is: v - (n·v)n = v - cos(θ)n
@@ -184,8 +186,13 @@ def geodesic_distance(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     a = F.normalize(a, dim=0)
     b = F.normalize(b, dim=0)
 
-    cos_dist = torch.dot(a, b).clamp(-1 + ARCCOS_CLAMP_EPS, 1 - ARCCOS_CLAMP_EPS)
-    return torch.acos(cos_dist)
+    cos_dist = torch.dot(a, b)
+
+    # Consistent with riemannian_log near-identity check
+    if cos_dist > 1 - NEAR_IDENTITY_THRESHOLD:
+        return torch.tensor(0.0, device=a.device, dtype=a.dtype)
+
+    return torch.acos(cos_dist.clamp(-1.0, 1.0))
 
 
 def project_to_tangent_space(

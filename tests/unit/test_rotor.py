@@ -351,15 +351,17 @@ class TestRotorEdgeCases:
     """Tests for edge cases in rotor computation."""
     
     def test_rotor_with_zero_vector(self):
-        """Test that rotor handles zero vector gracefully."""
+        """Test that rotor handles zero vector gracefully.
+
+        F.normalize(zeros) returns zeros in modern PyTorch (no error).
+        compute_householder_rotor should still produce a valid orthogonal matrix.
+        """
         source = torch.zeros(512)
-        
-        # This should either handle it gracefully or raise an error
-        # After normalization, it will be problematic
-        with pytest.raises((ValueError, RuntimeError)):
-            # Normalize will create NaN
-            source_normalized = F.normalize(source, dim=0)
-            R = compute_householder_rotor(source_normalized)
+        source_normalized = F.normalize(source, dim=0)
+
+        R = compute_householder_rotor(source_normalized)
+
+        assert verify_orthogonality(R)
     
     def test_rotor_standard_basis_vectors(self):
         """Test rotor between standard basis vectors."""

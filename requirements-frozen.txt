@@ -1,14 +1,10 @@
 # Frozen dependencies for reproducibility
-# These exact versions were used to generate the paper results.
 # Install with: pip install -r requirements-frozen.txt
 
 # Core dependencies
 torch==2.10.0
 numpy==2.4.1
 scipy==1.17.0
-
-# Visualization (optional, for generating figures)
-matplotlib>=3.7.0
 
 # Development/testing dependencies
 pytest>=7.3.0

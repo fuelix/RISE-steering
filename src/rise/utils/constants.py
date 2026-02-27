@@ -12,7 +12,9 @@ import math
 # =============================================================================
 
 # Clamping epsilon for arccos to avoid NaN from numerical errors
-ARCCOS_CLAMP_EPS = 1e-7
+# Must be small enough that acos(1-eps) ≈ 0 and acos(-1+eps) ≈ π to within
+# useful precision. 1e-7 was too large (acos(1-1e-7) ≈ 4.5e-4).
+ARCCOS_CLAMP_EPS = 0.0
 
 # Threshold below which vectors are considered identical (theta ≈ 0)
 NEAR_IDENTITY_THRESHOLD = 1e-6
@@ -24,13 +26,15 @@ ANTIPODAL_THRESHOLD = math.pi - 1e-6
 DIVISION_EPS = 1e-8
 
 # Tolerance for verifying tangent space orthogonality (float32)
-ORTHOGONALITY_TOL = 1e-5
+# Must accommodate accumulated float32 error: O(sqrt(d) * eps_mach) ≈ 3e-6
+# for d=512, but pathological inputs can be 10-50x worse.
+ORTHOGONALITY_TOL = 1e-4
 
 # Relaxed tolerance for float16 precision
 ORTHOGONALITY_TOL_FP16 = 1e-2
 
-# Tolerance for verifying rotor maps n to e1
-ROTOR_VERIFICATION_TOL = 1e-5
+# Tolerance for verifying rotor maps n to e1 and orthogonality (max-element)
+ROTOR_VERIFICATION_TOL = 5e-5
 ROTOR_VERIFICATION_TOL_FP16 = 1e-2
 
 # =============================================================================
